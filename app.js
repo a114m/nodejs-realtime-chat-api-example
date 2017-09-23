@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const path = require('path');
 const favicon = require('serve-favicon');
@@ -5,8 +7,9 @@ const logger = require('morgan');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const winston = require('winston');
+const SocketServer = require('socket.io');
 
-winston.level = process.env.LOG_LEVEL;
+winston.level = process.env.LOG_LEVEL || 'debug';
 
 const index = require('./routes/index');
 
@@ -44,4 +47,31 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-module.exports = app;
+
+/**
+ * Create socket.io listener
+ */
+
+const io = new SocketServer();
+
+/**
+ * Listening for web socket connection.
+ */
+
+io.on('connection', function(socket){
+  winston.debug('a user connected');
+
+  socket.on('chat message', function(msg){
+    winston.debug('message: ' + msg);
+  });
+
+  socket.on('disconnect', function(){
+    winston.debug('user disconnected');
+  });
+  
+});
+
+module.exports = {
+  app,
+  io
+};
