@@ -1,5 +1,3 @@
-require('dotenv').config();
-
 const express = require('express');
 const path = require('path');
 const favicon = require('serve-favicon');
@@ -10,6 +8,14 @@ const winston = require('winston');
 const SocketServer = require('socket.io');
 
 winston.level = process.env.LOG_LEVEL || 'debug';
+
+/**
+ * Initializing Database;
+ */
+
+const models = require('./models');
+models.init();
+
 
 const index = require('./routes/index');
 
