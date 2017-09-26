@@ -180,8 +180,13 @@ const Message = sequelize.define('message', {
 Company.hasMany(App, {as: 'Apps'});
 App.belongsTo(Company);
 
+Company.hasMany(Developer, {as: 'Developers'});
+Developer.belongsTo(Company);
+
 Developer.belongsTo(Account);
+Account.hasOne(Developer);
 User.belongsTo(Account);
+Account.hasOne(User);
 
 User.belongsToMany(App, {as: 'Apps', through: Chat, foreignKey: 'user_id', otherKey: 'app_id'});
 App.belongsToMany(User, {as: 'Users', through: Chat, foreignKey: 'app_id', otherKey: 'user_id'});
@@ -194,9 +199,37 @@ Chat.belongsTo(User, {foreignKey: 'user_id'}); //
 Chat.hasMany(Message, {as: 'Messages', foreignKey: 'chat_id'});
 Message.belongsTo(Chat, {as: 'Chat', foreignKey: 'chat_id'});
 
+Message.belongsTo(Account, {as: 'Sender', foreignKey: 'sender_id'});
+Account.hasMany(Message, {as: 'Messages', foreignKey: 'sender_id'});
+
+
+const loadSeedData = () => {
+  Company.create({
+    name: 'Snapchat'
+  }).then(company => {
+    App.create({
+      name: 'SnapChat', store: 'GOOGLE-PLAY', external_id: 'com.snapchat', company_id: company.id
+    }).then(app => {
+      Account.create().then(user_account => {
+        User.create({
+          external_id: '12345', account_id: user_account.id
+        }).then(user => {
+          Account.create().then(developer_account => {
+            Developer.create({
+              name: 'shady', email: 'shady@gmail.com', password: 'someEncryptedpPassword', role: 'admin', company_id: company.id, account_id: developer_account.id
+            }).then(developer => {
+              Chat.create({app_id: app.id, user_id: user.id}).then(chat => winston.info('Seed data loaded successfully'));
+            });
+          });
+        });
+      });      
+    });
+  }).catch('Failed loading seed data');
+}
 
 module.exports = {
   init,
+  loadSeedData,
   Company,
   App,
   Account,
