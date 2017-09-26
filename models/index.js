@@ -208,6 +208,10 @@ Message.belongsTo(Account, {as: 'Sender', foreignKey: 'sender_id'});
 Account.hasMany(Message, {as: 'Messages', foreignKey: 'sender_id'});
 
 
+
+/**
+ * Loading seed data to DB;
+ */
 const loadSeedData = () => {
   Company.create({
     name: 'Snapchat'
