@@ -9,7 +9,18 @@ require('dotenv').config();
 const app = require('../app').app;
 const io = require('../app').io;
 const debug = require('debug')('task:server');
-const http = require('http');
+const https = require('https');
+const fs = require('fs');
+
+
+/**
+ * Load key and certificate from files.
+ */
+
+var options = {
+  key: fs.readFileSync('./ssl/file.pem'),
+  cert: fs.readFileSync('./ssl/file.crt')
+};
 
 /**
  * Get port from environment and store in Express.
@@ -19,10 +30,10 @@ const port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);
 
 /**
- * Create HTTP server.
+ * Create HTTPS server.
  */
 
-const server = http.createServer(app);
+const server = https.createServer(options, app);
 
 /**
  * Attach the Web socket to the Http server.
