@@ -2,9 +2,13 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 
-/* GET home page. */
-router.get('/', function(req, res, next) {
-  res.sendFile(path.resolve('views/index.html'));
+
+router.get('/dev', (req, res, next) => {
+  res.sendfile(path.resolve('views/dev_chat.html'));
+});
+
+router.get('/user', (req, res, next) => {
+  res.sendfile(path.resolve('views/user_chat.html'));
 });
 
 module.exports = router;

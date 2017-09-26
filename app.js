@@ -14,7 +14,16 @@ winston.level = process.env.LOG_LEVEL || 'debug';
  */
 
 const models = require('./models');
-models.init();
+models.init().then(res => {
+  models.Company.count().then(count => {
+    if (count < 1){
+      winston.log(`Loading seed data...`);
+      models.loadSeedData();
+    }
+  });
+});
+
+
 
 
 const index = require('./routes/index');
@@ -64,18 +73,94 @@ const io = new SocketServer();
  * Listening for web socket connection.
  */
 
+io.use((socket, next) => {
+  let handshakeData = socket.request;
+  next();
+});
+
 io.on('connection', function(socket){
   winston.debug('a user connected');
 
-  socket.on('chat message', function(msg){
-    winston.debug('message: ' + msg);
+  let query = socket.handshake.query;
+  models.Chat.findById(query.chat).then(chat =>{
+    socket.join(`${chat.id}`);
+    if (query.dev){
+      models.Developer.findById(query.dev).then(dev => {
+        dev.getAccount().then(account => {
+          let client_name = `${dev.name} (app team): `;
+          retrieveChatHistory(chat, socket, account, client_name).catch(err => {
+            winston.error(`Error conntecting to chat: ${err}`);
+          }).then(messages => {
+            socket.on('chat message', function(msg){
+              winston.debug('message: ' + msg);
+              chat.createMessage({
+                content: msg,
+                sender_id: account.id,
+              }).then(message => {
+                // io.emit('chat message', `${client_name}${msg}`);
+                io.to(`${chat.id}`).emit('chat message', `${client_name}${msg}`);
+              }).catch(err => {
+                winston.error(`Error sending message: ${err}`);
+              });
+            });
+          });
+        });
+      });
+    } else if (query.user) {
+      models.User.findById(query.user).then(user => {
+        user.getAccount().then(account => {
+          retrieveChatHistory(chat, socket, account, null).catch(err => {
+            winston.error(`Error conntecting to chat: ${err}`);
+          }).then(messages => {
+            socket.on('chat message', function(msg){
+              winston.debug('message: ' + msg);
+              chat.createMessage({
+                content: msg,
+                sender_id: account.id,
+              }).then(message => {
+                // io.emit('chat message', `${msg}`);
+                io.to(`${chat.id}`).emit('chat message', `${msg}`);
+              }).catch(err => {
+                winston.error(`Error conntecting to chat: ${err}`);
+              });
+            });
+          });
+        });
+      });
+    } else 
+    return Promise.reject("Couldn't find user_id nor developer_id in request");
+  }).catch(err => {
+    winston.error(`Error conntecting to chat: ${err}`);
   });
-
   socket.on('disconnect', function(){
     winston.debug('user disconnected');
   });
-  
 });
+
+
+const retrieveChatHistory = (chat, socket, client_account, client_name) => {
+  return chat.getMessages().then(messages => {
+    messages.reduce((promise_chain, message) => {
+      return promise_chain.then(() => {
+        if (message.sender_id === client_account.id){
+          return new Promise((resolve, reject) => {
+            socket.emit('chat message', `${client_name || ''}${message.content || message.attachment || ''}`)
+            resolve();
+          });
+        } else
+          return message.getSender().then(sender_account => {
+            return sender_account.getDeveloper().then(dev => {
+              if (dev)
+                socket.emit('chat message', `${dev.name} (app team): ${message.content || message.attachment || ''}`);
+              else
+                socket.emit('chat message', `${message.content || message.attachment || ''}`);
+            });
+          });
+      });
+    }, Promise.resolve());
+    return messages;
+  });
+};
 
 module.exports = {
   app,
