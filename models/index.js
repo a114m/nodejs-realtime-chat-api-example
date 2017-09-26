@@ -6,22 +6,27 @@ const winston = require('winston');
  * Setting DB connection and general model configuration.
  */
 
-const sequelize = new Sequelize(process.env.MYSQL_DB_NAME, 'root', null, {
-  host: process.env.MYSQL_HOST,
-  port: parseInt(process.env.MYSQL_PORT) || 3306,
-  dialect: 'mysql',
-  pool: {
-    max: 5,
-    min: 0,
-    idle: 10000
-  },
-  define: {
-    timestamps: false,
-    underscored: true,
-    underscoredAll: true
-  },
-  logging: winston.silly
-});
+const sequelize = new Sequelize(
+  process.env.MYSQL_DB_NAME,
+  process.env.MYSQL_USERNAME || 'root',
+  process.env.MYSQL_PASSWORD || null,
+  {
+    host: process.env.MYSQL_HOST || '127.0.0.1',
+    port: parseInt(process.env.MYSQL_PORT) || 3306,
+    dialect: 'mysql',
+    pool: {
+      max: 5,
+      min: 0,
+      idle: 10000
+    },
+    define: {
+      timestamps: false,
+      underscored: true,
+      underscoredAll: true
+    },
+    logging: winston.silly
+  }
+);
 
 
 /**
